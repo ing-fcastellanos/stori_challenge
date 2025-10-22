@@ -43,7 +43,7 @@ func MigrateTransactions(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	// Validar que el CSV tenga las columnas necesarias
 	expectedHeaders := []string{"id", "user_id", "amount", "datetime"}
-	if !isValidCSVHeader(headers, expectedHeaders) {
+	if !IsValidCSVHeader(headers, expectedHeaders) {
 		http.Error(w, "El archivo CSV tiene un formato incorrecto", http.StatusBadRequest)
 		return
 	}
@@ -64,10 +64,18 @@ func MigrateTransactions(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Crear la transacción y agregarla a la lista
+		parseLegacyId, errLega := utils.ParseInt(record[0])
+		parseUserId, errUser := utils.ParseInt(record[1])
+		parseAmount, errAmou := utils.ParseFloat(record[2])
+		if errLega != nil || errUser != nil || errAmou != nil {
+			http.Error(w, "El archivo CSV contiene valores invalidos", http.StatusBadRequest)
+			return
+		}
+
 		transaction := models.Transaction{
-			LegacyId:  utils.ParseInt(record[0]),
-			UserID:    utils.ParseInt(record[1]),
-			Amount:    utils.ParseFloat(record[2]),
+			LegacyId:  parseLegacyId,
+			UserID:    parseUserId,
+			Amount:    parseAmount,
 			Timestamp: timestamp,
 		}
 
@@ -89,7 +97,7 @@ func MigrateTransactions(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 }
 
 // Verificar que las columnas del archivo CSV sean las esperadas
-func isValidCSVHeader(headers, expectedHeaders []string) bool {
+func IsValidCSVHeader(headers, expectedHeaders []string) bool {
 	if len(headers) != len(expectedHeaders) {
 		return false
 	}
