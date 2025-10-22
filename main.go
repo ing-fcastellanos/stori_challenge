@@ -7,10 +7,13 @@ import (
 	"net/http"
 	"os"
 
+	_ "fintech-backend/docs"
+
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 var db *gorm.DB
@@ -44,12 +47,20 @@ func init() {
 	}
 }
 
+// @title FinTech Backend API
+// @version 1.0
+// @description This is a simple API for handling financial transactions
+// @termsOfService https://example.com/terms/
+// @contact.name API Support
+// @contact.email support@example.com
+// @host localhost:8080
+// @BasePath /
+// @schemes http
 func main() {
 	// Inicializar el router
+	// TODO: Cargar las variables de DB desde una interface e iniciarlizar con el proyecto
 	router := mux.NewRouter()
 
-	// Definir los endpoints
-	// TODO: Cargar las variables de DB desde una interface e iniciarlizar con el proyecto
 	router.HandleFunc("/migrate", func(w http.ResponseWriter, r *http.Request) {
 		services.MigrateTransactions(db, w, r)
 	}).Methods("POST")
@@ -57,6 +68,9 @@ func main() {
 	router.HandleFunc("/users/{user_id}/balance", func(w http.ResponseWriter, r *http.Request) {
 		services.BalanceHandler(db, w, r)
 	}).Methods("GET")
+
+	// Documentación Swagger
+	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	// Arrancar el servidor
 	log.Fatal(http.ListenAndServe(":8080", router))

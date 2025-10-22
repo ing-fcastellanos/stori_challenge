@@ -1,5 +1,5 @@
 # Usa la imagen oficial de Golang como base
-FROM golang:1.20-alpine
+FROM golang:1.24-alpine
 
 # Setea el directorio de trabajo dentro del contenedor
 WORKDIR /app

@@ -3,17 +3,26 @@ package services
 import (
 	"fintech-backend/models"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 )
 
+// Balance godoc
+// @Summary Get the balance of a user within a date range
+// @Description Get the balance of a user by user_id within a date range
+// @Produce json
+// @Param user_id path int true "User ID"
+// @Param from query string false "From date" example("2024-01-01T00:00:00Z")
+// @Param to query string false "To date" example("2024-07-01T00:00:00Z")
+// @Success 200 {object} models.BalanceResult
+// @Failure 400 {string} string "Error al consultar el balance"
+// @Failure 404 {string} string "Usuario no encontrado"
+// @Router /users/{user_id}/balance [get]
 func BalanceHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
-	log.Print(fmt.Sprintf("handdler: %s, %s", from, to))
 
 	if from != "" && to != "" {
 		GetUserBalanceInRange(db, w, r)
@@ -24,8 +33,6 @@ func BalanceHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 // Función para obtener el balance total de un usuario
 func GetUserBalance(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	log.Print("Regular Balances")
-
 	vars := mux.Vars(r)
 	userID := vars["user_id"]
 
@@ -57,6 +64,11 @@ func GetUserBalance(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if creditsResult.TotalCredits == 0 && debitsResult.TotalDebits == 0 {
+		http.Error(w, "Usuario no encontrado o sin transacciones", http.StatusNotFound)
+		return
+	}
+
 	// Calcular el balance final
 	balance := creditsResult.TotalCredits + debitsResult.TotalDebits
 
@@ -72,15 +84,12 @@ func GetUserBalance(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 // Función para obtener el balance de un usuario en un rango de fechas
 func GetUserBalanceInRange(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	log.Print("Balance in range")
 	vars := mux.Vars(r)
 	userID := vars["user_id"]
 
 	// Obtener las fechas desde los parámetros de la URL
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
-
-	log.Print(fmt.Sprintf("%s, %s", from, to))
 
 	// Consultar los créditos (transacciones con monto positivo) en el rango de fechas
 	var creditsResult models.BalanceResult
@@ -109,6 +118,11 @@ func GetUserBalanceInRange(db *gorm.DB, w http.ResponseWriter, r *http.Request) 
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error al consultar los débitos: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if creditsResult.TotalCredits == 0 && debitsResult.TotalDebits == 0 {
+		http.Error(w, "Usuario no encontrado o sin transacciones", http.StatusNotFound)
 		return
 	}
 
