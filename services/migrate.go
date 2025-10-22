@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -50,6 +51,10 @@ func MigrateTransactions(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	// Procesar cada línea del CSV
 	var transactions []models.Transaction
+	totalCredits := 0.0
+	totalDebits := 0.0
+	totalTransactions := 0
+
 	for {
 		record, err := reader.Read()
 		if err != nil {
@@ -79,7 +84,15 @@ func MigrateTransactions(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			Timestamp: timestamp,
 		}
 
+		// Acumular totales de créditos y débitos
+		if transaction.Amount > 0 {
+			totalCredits += transaction.Amount
+		} else {
+			totalDebits += transaction.Amount
+		}
+
 		transactions = append(transactions, transaction)
+		totalTransactions++
 	}
 
 	// Insertar las transacciones en la base de datos
@@ -87,6 +100,17 @@ func MigrateTransactions(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		if err := db.Create(&txn).Error; err != nil {
 			log.Println("Error al guardar la transacción:", err)
 			http.Error(w, fmt.Sprintf("Error al guardar la transacción: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Enviar el reporte por correo electrónico
+	currentEnv := os.Getenv("ENV")
+	if currentEnv != "" {
+		mailer := utils.NewSMTPMailer()
+		err = SendEmailReport(true, totalTransactions, totalCredits, totalDebits, mailer)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error al enviar el informe: %v", err), http.StatusInternalServerError)
 			return
 		}
 	}
