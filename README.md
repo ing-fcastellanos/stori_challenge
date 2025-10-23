@@ -191,17 +191,3 @@ Si las migraciones fallan, puedes intentar eliminar la base de datos y crearla d
 docker-compose down
 docker-compose up --build
 ```
-
----
-
-## Contribuciones
-
-Si deseas contribuir al proyecto, por favor sigue estos pasos:
-
-1. Haz un fork de este repositorio.
-2. Crea una nueva rama para tu característica (`git checkout -b feature/nueva-caracteristica`).
-3. Realiza tus cambios y haz commit (`git commit -am 'Añadir nueva característica'`).
-4. Haz push a la rama (`git push origin feature/nueva-caracteristica`).
-5. Abre un pull request.
-
----
